@@ -5,9 +5,12 @@ import { useState, useId, useEffect } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Typewriter Effect ---
 export interface TypewriterProps {
@@ -255,9 +258,25 @@ function ScaninLogo({ className }: { className?: string }) {
 
 // --- Sign In Form ---
 function SignInForm() {
-  const handleSignIn = (event: React.FormEvent<HTMLFormElement>) => {
+  const { login } = useAuth();
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log("UI: Sign In form submitted");
+    setError("");
+    setLoading(true);
+    const form = new FormData(event.currentTarget);
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    const result = await login(email, password);
+    setLoading(false);
+    if (result.success) {
+      router.push("/");
+    } else {
+      setError(result.error || "Login gagal.");
+    }
   };
 
   return (
@@ -274,6 +293,11 @@ function SignInForm() {
           Masukkan email kamu untuk melanjutkan
         </p>
       </div>
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
       <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="email" className="text-gray-300">
@@ -305,9 +329,10 @@ function SignInForm() {
         </div>
         <Button
           type="submit"
+          disabled={loading}
           className="mt-1 rounded-lg font-semibold h-12 sm:h-11 text-base sm:text-sm"
         >
-          Masuk
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Masuk"}
         </Button>
       </div>
     </form>
@@ -316,9 +341,26 @@ function SignInForm() {
 
 // --- Sign Up Form ---
 function SignUpForm() {
-  const handleSignUp = (event: React.FormEvent<HTMLFormElement>) => {
+  const { register } = useAuth();
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log("UI: Sign Up form submitted");
+    setError("");
+    setLoading(true);
+    const form = new FormData(event.currentTarget);
+    const name = form.get("name") as string;
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    const result = await register(name, email, password);
+    setLoading(false);
+    if (result.success) {
+      router.push("/");
+    } else {
+      setError(result.error || "Registrasi gagal.");
+    }
   };
 
   return (
@@ -335,6 +377,11 @@ function SignUpForm() {
           Isi data di bawah untuk membuat akun Scanin
         </p>
       </div>
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
       <div className="grid gap-4">
         <div className="grid gap-2">
           <Label htmlFor="name" className="text-gray-300">
@@ -368,15 +415,17 @@ function SignUpForm() {
           required
           autoComplete="new-password"
           placeholder="Buat password"
+          minLength={8}
         />
         <p className="text-xs text-gray-600 -mt-1">
           Minimal 8 karakter dengan kombinasi huruf dan angka
         </p>
         <Button
           type="submit"
+          disabled={loading}
           className="mt-1 rounded-lg font-semibold h-12 sm:h-11 text-base sm:text-sm"
         >
-          Daftar
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Daftar"}
         </Button>
       </div>
     </form>
@@ -391,6 +440,75 @@ function AuthFormContainer({
   isSignIn: boolean;
   onToggle: () => void;
 }) {
+  const { loginWithGoogle } = useAuth();
+  const router = useRouter();
+  const [googleError, setGoogleError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleClick = async () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGoogleError("Google Client ID belum dikonfigurasi.");
+      return;
+    }
+
+    // Use Google's OAuth2 popup
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    const redirectUri = window.location.origin;
+    const scope = "openid email profile";
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account`;
+    
+    const popup = window.open(authUrl, "google-auth", `width=${width},height=${height},left=${left},top=${top}`);
+    
+    if (!popup) {
+      setGoogleError("Popup diblokir. Izinkan popup untuk login dengan Google.");
+      return;
+    }
+
+    setGoogleLoading(true);
+    setGoogleError("");
+
+    // Poll for the popup redirect
+    const pollTimer = setInterval(async () => {
+      try {
+        if (popup.closed) {
+          clearInterval(pollTimer);
+          setGoogleLoading(false);
+          return;
+        }
+        const popupUrl = popup.location.href;
+        if (popupUrl.startsWith(redirectUri)) {
+          clearInterval(pollTimer);
+          popup.close();
+          
+          // Extract access_token from URL hash
+          const hash = popupUrl.split("#")[1];
+          if (hash) {
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get("access_token");
+            if (accessToken) {
+              const result = await loginWithGoogle(accessToken);
+              setGoogleLoading(false);
+              if (result.success) {
+                router.push("/");
+              } else {
+                setGoogleError(result.error || "Google login gagal.");
+              }
+              return;
+            }
+          }
+          setGoogleLoading(false);
+          setGoogleError("Google login gagal. Token tidak ditemukan.");
+        }
+      } catch {
+        // Cross-origin error — popup hasn't redirected yet, keep polling
+      }
+    }, 500);
+  };
+
   return (
     <div className="mx-auto grid w-full max-w-[380px] gap-3 px-1">
       {isSignIn ? <SignInForm /> : <SignUpForm />}
@@ -412,30 +530,40 @@ function AuthFormContainer({
           Atau lanjut dengan
         </span>
       </div>
+      {googleError && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {googleError}
+        </div>
+      )}
       <Button
         variant="outline"
         type="button"
+        disabled={googleLoading}
         className="rounded-lg h-12 sm:h-11 text-base sm:text-sm"
-        onClick={() => console.log("UI: Google button clicked")}
+        onClick={handleGoogleClick}
       >
-        <svg className="mr-2 h-5 w-5 sm:h-4 sm:w-4" viewBox="0 0 24 24">
-          <path
-            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-            fill="#4285F4"
-          />
-          <path
-            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            fill="#34A853"
-          />
-          <path
-            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-            fill="#FBBC05"
-          />
-          <path
-            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-            fill="#EA4335"
-          />
-        </svg>
+        {googleLoading ? (
+          <Loader2 className="size-4 animate-spin mr-2" />
+        ) : (
+          <svg className="mr-2 h-5 w-5 sm:h-4 sm:w-4" viewBox="0 0 24 24">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+        )}
         Lanjut dengan Google
       </Button>
     </div>
@@ -477,6 +605,15 @@ export function AuthUI({
 }: AuthUIProps) {
   const [isSignIn, setIsSignIn] = useState(defaultMode === "signin");
   const toggleForm = () => setIsSignIn((prev) => !prev);
+  
+  const [orcAngry, setOrcAngry] = useState(false);
+  
+  const handleOrcClick = () => {
+    setOrcAngry(true);
+    setTimeout(() => {
+      setOrcAngry(false);
+    }, 2500);
+  };
 
   const finalSignInContent = {
     quote: { ...defaultSignInContent.quote, ...signInContent.quote },
@@ -546,42 +683,57 @@ export function AuthUI({
         {/* Floating scan illustration */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
-            {/* Outer ring */}
-            <div className="w-48 h-48 md:w-56 md:h-56 lg:w-80 lg:h-80 rounded-3xl border border-white/[0.06] flex items-center justify-center rotate-6 transition-transform duration-700">
-              {/* Inner ring */}
-              <div className="w-36 h-36 md:w-44 md:h-44 lg:w-60 lg:h-60 rounded-2xl border border-white/[0.08] flex items-center justify-center -rotate-3 bg-white/[0.01]">
-                {/* Center icon */}
-                <div className="w-24 h-24 md:w-28 md:h-28 lg:w-40 lg:h-40 rounded-xl border border-white/[0.1] bg-white/[0.02] flex items-center justify-center backdrop-blur-sm rotate-2">
-                  <svg
-                    width="48"
-                    height="48"
-                    viewBox="0 0 48 48"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="opacity-30 w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12"
+            {/* Orc Container */}
+            <div className="relative flex items-center justify-center z-50">
+              <AnimatePresence>
+                {orcAngry && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: 1, 
+                      y: 0,
+                      rotate: [-3, 3, -3, 3, 0],
+                      x: [-2, 2, -2, 2, 0]
+                    }}
+                    exit={{ opacity: 0, scale: 0.5, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute -top-16 md:-top-20 left-1/2 -translate-x-1/2 bg-white text-black font-bold px-4 py-2 md:px-5 md:py-3 rounded-xl shadow-2xl text-xs md:text-sm whitespace-nowrap z-50 pointer-events-none"
+                    style={{ fontFamily: "'Press Start 2P', monospace", imageRendering: "pixelated" }}
                   >
-                    <path
-                      d="M 6 36 C 14 36 24 12 20 12 C 16 12 12 28 18 36 C 24 44 30 24 36 24 C 38 24 40 36 44 36"
-                      stroke="url(#gradient-hero)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                    <defs>
-                      <linearGradient
-                        id="gradient-hero"
-                        x1="6"
-                        y1="12"
-                        x2="44"
-                        y2="36"
-                        gradientUnits="userSpaceOnUse"
-                      >
-                        <stop stopColor="#ffffff" />
-                        <stop offset="1" stopColor="#4b5563" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-              </div>
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-t-[8px] border-t-white border-r-[8px] border-r-transparent"></div>
+                    CEPAT LOGIN WOY!!!
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.img
+                src="https://www.8bitcn.com/_next/image?url=%2Fimages%2F8bit-ogre.png&w=256&q=75&dpl=dpl_B9Q5u7DD6qZpoCz3VRwuR19npVHK"
+                alt="8-bit Orc"
+                width={256}
+                height={256}
+                className="w-32 h-32 md:w-56 md:h-56 lg:w-72 lg:h-72 object-contain cursor-pointer relative z-10"
+                style={{ imageRendering: "pixelated" }}
+                animate={orcAngry ? {
+                  scale: [1, 1.2, 1],
+                  rotate: [-10, 10, -10, 10, 0],
+                  filter: ["hue-rotate(0deg)", "hue-rotate(90deg) drop-shadow(0 0 20px red)", "hue-rotate(0deg)"]
+                } : {
+                  y: [0, -20, 0],
+                  rotate: [-3, 3, -3],
+                }}
+                transition={orcAngry ? {
+                  duration: 0.5,
+                  repeat: 4,
+                } : {
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                onClick={handleOrcClick}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              />
             </div>
 
             {/* Floating dots */}
@@ -595,8 +747,8 @@ export function AuthUI({
         <div className="absolute inset-x-0 bottom-0 h-[120px] bg-gradient-to-t from-[#0a0a0a] to-transparent" />
 
         {/* Quote */}
-        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end p-4 md:p-6 pb-8 md:pb-10">
-          <blockquote className="space-y-2 text-center max-w-xs lg:max-w-sm">
+        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end p-4 md:p-6 pb-8 md:pb-10 pointer-events-none">
+          <blockquote className="space-y-2 text-center max-w-xs lg:max-w-sm pointer-events-auto">
             <p className="text-base lg:text-lg font-medium text-white/80">
               &ldquo;
               <Typewriter

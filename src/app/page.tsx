@@ -1,13 +1,27 @@
 "use client";
 import React from "react";
-import { Navbar } from "@/components/ui/mini-navbar";
+import { ScaninHeader } from "@/components/ui/scanin-header";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import Image from "next/image";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  const handleScanClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (isAuthenticated) {
+      router.push("/scan");
+    } else {
+      router.push("/sign-in");
+    }
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-between bg-[#0a0a0a]">
-      <Navbar />
+      <ScaninHeader />
 
       <div className="flex flex-col overflow-hidden pb-[120px] sm:pb-[200px] md:pb-[350px] lg:pb-[500px] pt-[56px] sm:pt-[64px] md:pt-[80px]">
         <ContainerScroll
@@ -23,7 +37,10 @@ export default function Home() {
                 Scanin membantu kamu mengubah catatan tulisan tangan menjadi dokumen PDF yang rapi dan terstruktur secara otomatis.
               </p>
               <div className="flex flex-row items-center justify-center gap-2 sm:gap-3 mt-4 sm:mt-5 md:mt-8">
-                <button className="px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 text-[11px] sm:text-xs md:text-sm font-semibold text-black bg-gradient-to-br from-gray-100 to-gray-300 rounded-full hover:from-gray-200 hover:to-gray-400 transition-all duration-200">
+                <button 
+                  onClick={handleScanClick}
+                  className="px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 text-[11px] sm:text-xs md:text-sm font-semibold text-black bg-gradient-to-br from-gray-100 to-gray-300 rounded-full hover:from-gray-200 hover:to-gray-400 transition-all duration-200"
+                >
                   Mulai Scan
                 </button>
                 <button className="px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 text-[11px] sm:text-xs md:text-sm border border-[#333] bg-[rgba(31,31,31,0.62)] text-gray-300 rounded-full hover:border-white/50 hover:text-white transition-colors duration-200">
