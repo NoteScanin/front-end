@@ -29,7 +29,7 @@ const AnimatedNavLink = ({ href, children }: { href: string; children: React.Rea
 export const ScaninHeader = () => {
     const [menuState, setMenuState] = React.useState(false)
     const [isScrolled, setIsScrolled] = React.useState(false)
-    const { isAuthenticated } = useAuth()
+    const { isAuthenticated, user, logout } = useAuth()
     const router = useRouter()
 
     const handleScanClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -98,26 +98,71 @@ export const ScaninHeader = () => {
                                     ))}
                                 </ul>
                             </div>
-                            <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                <Link 
-                                    href="/sign-in"
-                                    className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#333] bg-[rgba(31,31,31,0.62)] text-gray-300 px-4 text-sm font-medium transition-colors hover:border-white/50 hover:text-white", isScrolled && 'lg:hidden')}
-                                >
-                                    <span>Masuk</span>
-                                </Link>
-                                <Link 
-                                    href="/sign-up"
-                                    className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-gray-100 to-gray-300 text-black px-4 text-sm font-semibold transition-colors hover:from-white hover:to-gray-200", isScrolled && 'lg:hidden')}
-                                >
-                                    <span>Daftar</span>
-                                </Link>
-                                <Link 
-                                    href="/scan"
-                                    onClick={handleScanClick}
-                                    className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-gray-100 to-gray-300 text-black px-4 text-sm font-semibold transition-colors hover:from-white hover:to-gray-200", isScrolled ? 'lg:inline-flex' : 'hidden')}
-                                >
-                                    <span>Mulai Scan</span>
-                                </Link>
+                            <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit sm:items-center">
+                                {isAuthenticated ? (
+                                    <>
+                                        <Link 
+                                            href="/scan"
+                                            className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-gray-100 to-gray-300 text-black px-4 text-sm font-semibold transition-colors hover:from-white hover:to-gray-200"
+                                        >
+                                            <span>Mulai Scan</span>
+                                        </Link>
+                                        <div className="relative group hidden sm:block">
+                                            <button className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gray-700 bg-gray-800 focus:outline-none transition-transform group-hover:scale-105">
+                                                {user?.avatar_url ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={user.avatar_url} alt={user?.name || "Profile"} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <span className="text-sm font-bold text-gray-300">
+                                                        {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+                                                    </span>
+                                                )}
+                                            </button>
+                                            <div className="absolute right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pt-2">
+                                                <div className="rounded-xl border border-[#333] bg-[#111] p-2 shadow-xl">
+                                                    <div className="px-3 py-2 text-xs text-gray-400 border-b border-[#333] mb-1 truncate">
+                                                        {user?.email}
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => logout()}
+                                                        className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                                                    >
+                                                        Keluar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Mobile Logout Button */}
+                                        <button 
+                                            onClick={() => logout()}
+                                            className="sm:hidden inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-red-900 bg-red-950/30 text-red-400 px-4 text-sm font-medium transition-colors hover:bg-red-900/50"
+                                        >
+                                            <span>Keluar</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Link 
+                                            href="/sign-in"
+                                            className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#333] bg-[rgba(31,31,31,0.62)] text-gray-300 px-4 text-sm font-medium transition-colors hover:border-white/50 hover:text-white", isScrolled && 'lg:hidden')}
+                                        >
+                                            <span>Masuk</span>
+                                        </Link>
+                                        <Link 
+                                            href="/sign-up"
+                                            className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-gray-100 to-gray-300 text-black px-4 text-sm font-semibold transition-colors hover:from-white hover:to-gray-200", isScrolled && 'lg:hidden')}
+                                        >
+                                            <span>Daftar</span>
+                                        </Link>
+                                        <Link 
+                                            href="/scan"
+                                            onClick={handleScanClick}
+                                            className={cn("inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-gray-100 to-gray-300 text-black px-4 text-sm font-semibold transition-colors hover:from-white hover:to-gray-200", isScrolled ? 'lg:inline-flex' : 'hidden')}
+                                        >
+                                            <span>Mulai Scan</span>
+                                        </Link>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

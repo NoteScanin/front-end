@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGoogleLogin } from "@react-oauth/google";
 
 // --- Typewriter Effect ---
 export interface TypewriterProps {
@@ -273,7 +274,7 @@ function SignInForm() {
     const result = await login(email, password);
     setLoading(false);
     if (result.success) {
-      router.push("/");
+      router.push("/scan");
     } else {
       setError(result.error || "Login gagal.");
     }
@@ -357,7 +358,7 @@ function SignUpForm() {
     const result = await register(name, email, password);
     setLoading(false);
     if (result.success) {
-      router.push("/");
+      router.push("/scan");
     } else {
       setError(result.error || "Registrasi gagal.");
     }
@@ -445,68 +446,30 @@ function AuthFormContainer({
   const [googleError, setGoogleError] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleGoogleClick = async () => {
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setGoogleLoading(true);
+      setGoogleError("");
+      const result = await loginWithGoogle(tokenResponse.access_token);
+      setGoogleLoading(false);
+      if (result.success) {
+        router.push("/scan");
+      } else {
+        setGoogleError(result.error || "Google login gagal.");
+      }
+    },
+    onError: () => {
+      setGoogleError("Google login gagal atau dibatalkan.");
+    },
+  });
+
+  const handleGoogleClick = () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) {
       setGoogleError("Google Client ID belum dikonfigurasi.");
       return;
     }
-
-    // Use Google's OAuth2 popup
-    const width = 500;
-    const height = 600;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-    const redirectUri = window.location.origin;
-    const scope = "openid email profile";
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${encodeURIComponent(scope)}&prompt=select_account`;
-    
-    const popup = window.open(authUrl, "google-auth", `width=${width},height=${height},left=${left},top=${top}`);
-    
-    if (!popup) {
-      setGoogleError("Popup diblokir. Izinkan popup untuk login dengan Google.");
-      return;
-    }
-
-    setGoogleLoading(true);
-    setGoogleError("");
-
-    // Poll for the popup redirect
-    const pollTimer = setInterval(async () => {
-      try {
-        if (popup.closed) {
-          clearInterval(pollTimer);
-          setGoogleLoading(false);
-          return;
-        }
-        const popupUrl = popup.location.href;
-        if (popupUrl.startsWith(redirectUri)) {
-          clearInterval(pollTimer);
-          popup.close();
-          
-          // Extract access_token from URL hash
-          const hash = popupUrl.split("#")[1];
-          if (hash) {
-            const params = new URLSearchParams(hash);
-            const accessToken = params.get("access_token");
-            if (accessToken) {
-              const result = await loginWithGoogle(accessToken);
-              setGoogleLoading(false);
-              if (result.success) {
-                router.push("/");
-              } else {
-                setGoogleError(result.error || "Google login gagal.");
-              }
-              return;
-            }
-          }
-          setGoogleLoading(false);
-          setGoogleError("Google login gagal. Token tidak ditemukan.");
-        }
-      } catch {
-        // Cross-origin error — popup hasn't redirected yet, keep polling
-      }
-    }, 500);
+    handleGoogleLogin();
   };
 
   return (
