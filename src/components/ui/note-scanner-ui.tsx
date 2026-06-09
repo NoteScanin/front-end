@@ -12,14 +12,21 @@ import {
     ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function NoteScannerUI({ className }: { className?: string }) {
+    const { token } = useAuth();
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     
     const [isScanning, setIsScanning] = useState(false);
+    const [scanProgress, setScanProgress] = useState<number>(0);
+    const [scanStatus, setScanStatus] = useState<string>("");
     const [extractedText, setExtractedText] = useState<string | null>(null);
+    const [jobId, setJobId] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleDrag = (e: React.DragEvent) => {
@@ -38,6 +45,9 @@ export function NoteScannerUI({ className }: { className?: string }) {
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrl(objectUrl);
             setExtractedText(null); // Reset previous results
+            setJobId(null);
+            setScanProgress(0);
+            setScanStatus("");
         }
     };
 
@@ -60,6 +70,7 @@ export function NoteScannerUI({ className }: { className?: string }) {
     const removeFile = () => {
         setSelectedFile(null);
         setExtractedText(null);
+        setJobId(null);
         if (previewUrl) {
             URL.revokeObjectURL(previewUrl);
             setPreviewUrl(null);
@@ -77,20 +88,137 @@ export function NoteScannerUI({ className }: { className?: string }) {
         };
     }, [previewUrl]);
 
-    const handleScan = () => {
+    const handleScan = async () => {
         if (!selectedFile) return;
+        if (!token) {
+            alert("Harap login terlebih dahulu.");
+            return;
+        }
+
         setIsScanning(true);
+        setScanProgress(0);
+        setScanStatus("Mengunggah gambar...");
         
-        // Simulate API call to OCR
-        setTimeout(() => {
+        try {
+            // 1. Upload file to create note
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            
+            const uploadRes = await fetch(`${API_URL}/api/v1/notes/upload`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!uploadRes.ok) {
+                throw new Error("Gagal mengunggah gambar");
+            }
+            
+            const uploadData = await uploadRes.json();
+            const noteId = uploadData.data.id;
+
+            // 2. Start OCR job
+            setScanStatus("Memulai proses AI...");
+            const processRes = await fetch(`${API_URL}/api/v1/ocr/process/${noteId}`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!processRes.ok) {
+                throw new Error("Gagal memulai proses OCR");
+            }
+
+            const processData = await processRes.json();
+            const currentJobId = processData.data.jobId;
+            setJobId(currentJobId);
+
+            // 3. Listen to SSE for progress
+            const eventSource = new EventSource(`${API_URL}/api/v1/ocr/jobs/${currentJobId}/stream?token=${token}`);
+            
+            eventSource.addEventListener("progress", async (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    setScanProgress(data.progress || 0);
+                    
+                    if (data.status === "COMPLETED") {
+                        eventSource.close();
+                        setScanStatus("Selesai!");
+                        
+                        // 4. Fetch Results
+                        const resultRes = await fetch(`${API_URL}/api/v1/ocr/results/${currentJobId}`, {
+                            headers: {
+                                "Authorization": `Bearer ${token}`
+                            }
+                        });
+                        if (resultRes.ok) {
+                            const resultData = await resultRes.json();
+                            setExtractedText(resultData.data.clean_text || resultData.data.raw_text || "Tidak ada teks terdeteksi.");
+                        } else {
+                            throw new Error("Gagal mengambil hasil");
+                        }
+                        setIsScanning(false);
+                    } else if (data.status === "FAILED") {
+                        eventSource.close();
+                        throw new Error(data.error || "Proses OCR gagal");
+                    } else {
+                        setScanStatus("Memproses gambar...");
+                    }
+                } catch (err) {
+                    eventSource.close();
+                    console.error("SSE Error:", err);
+                    alert("Terjadi kesalahan saat memproses data.");
+                    setIsScanning(false);
+                }
+            });
+
+            eventSource.onerror = (err) => {
+                console.error("EventSource failed:", err);
+                eventSource.close();
+                alert("Koneksi terputus saat memantau progres.");
+                setIsScanning(false);
+            };
+
+        } catch (err: any) {
+            console.error("OCR Error:", err);
+            alert(err.message || "Terjadi kesalahan saat scan gambar.");
             setIsScanning(false);
-            setExtractedText("Ini adalah contoh simulasi hasil teks dari AI OCR.\n\nTulisan tangan dari foto akan otomatis terbaca dan diubah menjadi teks digital di sini. Kamu bisa mengedit teks ini sebelum mengunduhnya sebagai PDF.");
-        }, 2000);
+        }
     };
 
-    const handleDownloadPDF = () => {
-        // Placeholder for actual PDF generation logic
-        alert("Fungsi Download PDF akan dieksekusi di sini...");
+    const handleDownloadPDF = async () => {
+        if (!jobId) {
+            alert("Tidak ada hasil untuk diunduh.");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/api/v1/pdf/generate/${jobId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ text: extractedText })
+            });
+
+            if (!res.ok) {
+                throw new Error("Gagal membuat PDF");
+            }
+
+            const data = await res.json();
+            const pdfId = data.data.id;
+            
+            // Trigger download via window.open
+            window.open(`${API_URL}/api/v1/pdf/download/${pdfId}`, "_blank");
+            
+        } catch (err: any) {
+            console.error("Download error:", err);
+            alert(err.message || "Gagal mengunduh PDF.");
+        }
     };
 
     return (
@@ -185,32 +313,43 @@ export function NoteScannerUI({ className }: { className?: string }) {
                                 onClick={removeFile}
                                 className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                                 aria-label="Hapus foto"
+                                disabled={isScanning}
                             >
                                 <X className="w-4 h-4 text-black/50 dark:text-white/50" />
                             </button>
                         </div>
 
                         {!extractedText ? (
-                            <button
-                                onClick={handleScan}
-                                disabled={isScanning}
-                                className={cn(
-                                    "w-full py-4 px-6 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group",
-                                    isScanning && "animate-pulse"
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleScan}
+                                    disabled={isScanning}
+                                    className={cn(
+                                        "w-full py-4 px-6 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group",
+                                        isScanning && "animate-pulse"
+                                    )}
+                                >
+                                    {isScanning ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            <span>{scanStatus} {scanProgress}%</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="w-4 h-4" />
+                                            <span>Mulai Ekstrak Teks</span>
+                                        </>
+                                    )}
+                                </button>
+                                {isScanning && (
+                                    <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-black dark:bg-white transition-all duration-300 ease-out"
+                                            style={{ width: `${scanProgress}%` }}
+                                        />
+                                    </div>
                                 )}
-                            >
-                                {isScanning ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span>Memproses dengan AI...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="w-4 h-4" />
-                                        <span>Mulai Ekstrak Teks</span>
-                                    </>
-                                )}
-                            </button>
+                            </div>
                         ) : null}
                     </div>
                 )}
