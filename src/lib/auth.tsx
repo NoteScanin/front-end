@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
     if (stored) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setToken(stored);
       authApi
         .me(stored)
