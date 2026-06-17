@@ -2,6 +2,7 @@
 import React from "react";
 import { ScaninHeader } from "@/components/ui/scanin-header";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
+import { HowItWorks } from "@/components/ui/how-it-works";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-between bg-[#0a0a0a]">
       <ScaninHeader />
 
-      <div className="flex flex-col overflow-hidden pb-[120px] sm:pb-[200px] md:pb-[350px] lg:pb-[500px] pt-[56px] sm:pt-[64px] md:pt-[80px]">
+      <div className="flex flex-col overflow-hidden pb-10 sm:pb-16 md:pb-24 lg:pb-32 pt-2 sm:pt-4 md:pt-8">
         <ContainerScroll
           titleComponent={
             <div className="pb-6 sm:pb-10 md:pb-16 lg:pb-24 px-4 sm:px-6">
@@ -60,6 +61,8 @@ export default function Home() {
           />
         </ContainerScroll>
       </div>
+      
+      <HowItWorks />
     </main>
   );
 }

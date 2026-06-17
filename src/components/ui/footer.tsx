@@ -2,7 +2,6 @@
 import React from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
 import { FaInstagram, FaLinkedin, FaYoutube, FaGithub } from 'react-icons/fa';
 
 interface FooterLink {
@@ -62,9 +61,24 @@ export function Footer() {
 
 			<div className="grid w-full gap-8 xl:grid-cols-3 xl:gap-8">
 				<AnimatedContainer className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="bg-black dark:bg-white p-2 rounded-xl">
-                            <Sparkles className="size-5 text-white dark:text-black" />
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <div className="bg-black dark:bg-white w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+                            <svg
+                                width="24"
+                                height="12"
+                                viewBox="0 0 48 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="text-white dark:text-black w-6 h-auto"
+                            >
+                                <path
+                                    d="M 6 18 C 10 18 16 6 12 6 C 8 6 6 14 10 18 C 14 22 18 12 22 12 C 24 12 26 18 30 18 C 34 18 38 12 42 10"
+                                    stroke="currentColor"
+                                    strokeWidth="3.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
                         </div>
                         <span className="text-xl font-bold tracking-tight text-black dark:text-white">Scanin</span>
                     </div>

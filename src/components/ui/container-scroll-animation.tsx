@@ -42,7 +42,7 @@ export const ContainerScroll = ({
       case "tablet":
         return [0.85, 0.95];
       default:
-        return [1.05, 1];
+        return [1.15, 1.1];
     }
   };
 
@@ -74,11 +74,11 @@ export const ContainerScroll = ({
 
   return (
     <div
-      className="h-[32rem] sm:h-[45rem] md:h-[60rem] lg:h-[80rem] flex items-center justify-center relative px-3 py-2 sm:p-6 md:p-10 lg:p-20"
+      className="h-[32rem] sm:h-[40rem] md:h-[50rem] lg:h-[60rem] flex items-center justify-center relative px-3 py-2 sm:p-6 md:p-10 lg:p-16"
       ref={containerRef}
     >
       <div
-        className="py-4 sm:py-12 md:py-20 lg:py-40 w-full relative"
+        className="py-4 sm:py-8 md:py-12 lg:py-16 w-full relative"
         style={{
           perspective: "1000px",
         }}
@@ -123,7 +123,7 @@ export const Card = ({
         boxShadow:
           "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
       }}
-      className="max-w-5xl -mt-4 sm:-mt-6 md:-mt-12 mx-auto h-auto w-full border-2 sm:border-3 md:border-4 border-[#6C6C6C] p-1 sm:p-2 md:p-4 lg:p-6 bg-[#222222] rounded-2xl sm:rounded-[24px] md:rounded-[30px] shadow-2xl"
+      className="max-w-[1400px] w-[95%] -mt-4 sm:-mt-6 md:-mt-12 mx-auto h-auto border-2 sm:border-3 md:border-4 border-[#6C6C6C] p-1 sm:p-2 md:p-4 lg:p-6 bg-[#222222] rounded-2xl sm:rounded-[24px] md:rounded-[30px] shadow-2xl"
     >
       <div className="h-full w-full overflow-hidden rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-zinc-900 p-0.5 sm:p-1 md:p-4">
         {children}
