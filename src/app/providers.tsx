@@ -7,14 +7,13 @@ import { AuthProvider } from "@/lib/auth";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Only wrap with GoogleOAuthProvider if client ID is set
-  if (GOOGLE_CLIENT_ID) {
-    return (
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <AuthProvider>{children}</AuthProvider>
-      </GoogleOAuthProvider>
-    );
-  }
-
-  return <AuthProvider>{children}</AuthProvider>;
+  // Always wrap with GoogleOAuthProvider to prevent build errors on Vercel
+  // when env vars might be temporarily missing during prerendering.
+  const clientId = GOOGLE_CLIENT_ID || "dummy_client_id_for_build";
+  
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      <AuthProvider>{children}</AuthProvider>
+    </GoogleOAuthProvider>
+  );
 }
