@@ -42,16 +42,16 @@ export const ContainerScroll = ({
       case "tablet":
         return [0.85, 0.95];
       default:
-        return [1.15, 1.1];
+        return [0.9, 0.95];
     }
   };
 
   const rotateValues = (): [number, number] => {
     switch (screenSize) {
       case "mobile":
-        return [12, 0];
+        return [20, 0];
       case "tablet":
-        return [16, 0];
+        return [20, 0];
       default:
         return [20, 0];
     }
@@ -123,7 +123,7 @@ export const Card = ({
         boxShadow:
           "0 0 #0000004d, 0 9px 20px #0000004a, 0 37px 37px #00000042, 0 84px 50px #00000026, 0 149px 60px #0000000a, 0 233px 65px #00000003",
       }}
-      className="max-w-[1400px] w-[95%] -mt-4 sm:-mt-6 md:-mt-12 mx-auto h-auto border-2 sm:border-3 md:border-4 border-[#6C6C6C] p-1 sm:p-2 md:p-4 lg:p-6 bg-[#222222] rounded-2xl sm:rounded-[24px] md:rounded-[30px] shadow-2xl"
+      className="max-w-[1100px] w-[95%] -mt-4 sm:-mt-6 md:-mt-12 mx-auto h-auto border-2 sm:border-3 md:border-4 border-[#6C6C6C] p-1 sm:p-2 md:p-4 lg:p-6 bg-[#222222] rounded-2xl sm:rounded-[24px] md:rounded-[30px] shadow-2xl"
     >
       <div className="h-full w-full overflow-hidden rounded-xl sm:rounded-2xl bg-gray-100 dark:bg-zinc-900 p-0.5 sm:p-1 md:p-4">
         {children}

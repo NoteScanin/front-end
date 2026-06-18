@@ -7,8 +7,10 @@ Repository ini berisi kode sumber untuk bagian **Frontend** dari aplikasi Scanin
 ## ✨ Fitur Utama
 
 - **Landing Page Interaktif**: Dilengkapi dengan animasi scroll premium yang mulus.
+- **Video Preview Animasi**: Menampilkan demonstrasi video *autoplay* di dalam mockup tablet dengan ukuran file yang sangat dioptimalkan untuk mempercepat *load time*.
 - **Smart Navigation**: Navbar modern dengan efek *glassmorphism* yang responsif dan dinamis, menyesuaikan ukuran dan bentuk saat pengguna melakukan *scroll*.
 - **Modern Tech Stack**: Dibangun menggunakan Next.js 15 (App Router) terbaru untuk performa maksimal dan SEO yang baik.
+- **Custom Domain Ready**: Sudah dikonfigurasi untuk terhubung dengan mulus ke domain kustom (`notescanin.web.id`) dengan penyesuaian origin dan CORS yang diperlukan.
 - **Desain Responsif**: Antarmuka yang dioptimalkan dengan sempurna untuk perangkat *mobile* maupun *desktop*.
 - **Animasi Tingkat Lanjut**: Memanfaatkan Framer Motion untuk transisi komponen yang elegan bergaya Apple/Vercel.
 
